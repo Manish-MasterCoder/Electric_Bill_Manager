@@ -1,0 +1,13 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // All user data is scoped under /users/{userId}/
+    // A user can only read or write their own sub-collection documents.
+    // Cross-user access is impossible at the database rule level.
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null
+                         && request.auth.uid == userId;
+    }
+  }
+}

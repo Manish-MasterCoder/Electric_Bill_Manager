@@ -1,0 +1,2107 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ElectraTrack — Electricity Bill Manager</title>
+  <meta name="description" content="Track, analyze, and visualize your electricity bills with intelligent year-over-year insights powered by Firebase." />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+          colors: {
+            brand: {
+              50:  '#f0f9ff',
+              100: '#e0f2fe',
+              200: '#bae6fd',
+              300: '#7dd3fc',
+              400: '#38bdf8',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+              800: '#075985',
+              900: '#0c4a6e',
+            },
+            surface: {
+              900: '#0d1117',
+              800: '#161b22',
+              700: '#21262d',
+              600: '#30363d',
+              500: '#484f58',
+            }
+          },
+          animation: {
+            'fade-in': 'fadeIn 0.4s ease-out',
+            'slide-up': 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
+          },
+          keyframes: {
+            fadeIn:  { from: { opacity: '0' }, to: { opacity: '1' } },
+            slideUp: { from: { opacity: '0', transform: 'translateY(20px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
+          },
+        }
+      }
+    };
+  </script>
+
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
+  <!-- Firebase SDK v9 (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    /* ── CSS Custom Properties: Theme Tokens ────────────────────
+       All colours are driven by these variables.
+       Switching theme = toggling html.dark / html.light.
+       Transition covers every element via the `transition` on *.
+    ────────────────────────────────────────────────────────── */
+    :root {
+      /* Dark theme (default) */
+      --bg-base:        #0d1117;
+      --bg-surface:     #161b22;
+      --bg-surface-2:   #21262d;
+      --border:         rgba(48,54,61,0.6);
+      --border-solid:   #30363d;
+      --text-primary:   #e6edf3;
+      --text-secondary: #8b949e;
+      --text-muted:     #484f58;
+      --text-label:     #8b949e;
+      --glass-bg:       rgba(22,27,34,0.85);
+      --nav-bg:         rgba(13,17,23,0.98);
+      --auth-bg-solid:  #0d1117;
+      --input-bg:       #0d1117;
+      --select-bg:      #0d1117;
+      --option-bg:      #161b22;
+      --record-bg:      rgba(13,17,23,0.6);
+      --record-hover:   rgba(33,38,45,0.8);
+      --skeleton-a:     #21262d;
+      --skeleton-b:     #2d333b;
+      --scrollbar-track:#161b22;
+      --scrollbar-thumb:#30363d;
+      --scrollbar-hover:#484f58;
+      --footer-border:  #1f2937;
+      --tab-hover-bg:   rgba(48,54,61,0.4);
+      --chart-grid:     rgba(48,54,61,0.4);
+      --chart-tick:     #484f58;
+      --chart-legend:   #8b949e;
+      --chart-tooltip-bg: rgba(22,27,34,0.95);
+      --chart-tooltip-border: rgba(48,54,61,0.8);
+      --chart-tooltip-title: #e6edf3;
+      --chart-tooltip-body:  #8b949e;
+      --shadow-glow:    rgba(14,165,233,0.15);
+    }
+
+    html.light {
+      /* Light theme overrides */
+      --bg-base:        #f0f6ff;
+      --bg-surface:     #ffffff;
+      --bg-surface-2:   #f3f7fd;
+      --border:         rgba(14,165,233,0.18);
+      --border-solid:   #c8ddf0;
+      --text-primary:   #0f172a;
+      --text-secondary: #334155;
+      --text-muted:     #94a3b8;
+      --text-label:     #475569;
+      --glass-bg:       rgba(255,255,255,0.82);
+      --nav-bg:         rgba(240,246,255,0.96);
+      --auth-bg-solid:  #f0f6ff;
+      --input-bg:       #ffffff;
+      --select-bg:      #ffffff;
+      --option-bg:      #ffffff;
+      --record-bg:      rgba(240,246,255,0.7);
+      --record-hover:   rgba(224,242,254,0.9);
+      --skeleton-a:     #e2eaf5;
+      --skeleton-b:     #cddaee;
+      --scrollbar-track:#e2eaf5;
+      --scrollbar-thumb:#94a3b8;
+      --scrollbar-hover:#64748b;
+      --footer-border:  #bfdbfe;
+      --tab-hover-bg:   rgba(14,165,233,0.08);
+      --chart-grid:     rgba(14,165,233,0.12);
+      --chart-tick:     #64748b;
+      --chart-legend:   #475569;
+      --chart-tooltip-bg: rgba(255,255,255,0.97);
+      --chart-tooltip-border: rgba(14,165,233,0.3);
+      --chart-tooltip-title: #0f172a;
+      --chart-tooltip-body:  #475569;
+      --shadow-glow:    rgba(14,165,233,0.12);
+    }
+
+    /* ── Global transition (theme switch) ── */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      transition:
+        background-color 0.25s ease,
+        border-color     0.25s ease,
+        color            0.25s ease,
+        box-shadow       0.25s ease;
+    }
+    /* Exempt: animations/transforms must not be throttled by transition */
+    .spinner, .skeleton, .btn-primary, .btn-google, .stat-card-glow,
+    .record-row, canvas, svg {
+      transition-property: background-color, border-color, color, box-shadow;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg-base);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+    ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+
+    /* Fluid Typography */
+    .text-fluid-xl { font-size: clamp(1.5rem, 3vw, 2.25rem); }
+    .text-fluid-lg { font-size: clamp(1.125rem, 2vw, 1.5rem); }
+
+    /* Glassmorphism */
+    .glass {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border);
+    }
+
+    /* Gradient border */
+    .grad-border { position: relative; border-radius: 0.75rem; }
+    .grad-border::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 0.75rem;
+      padding: 1px;
+      background: linear-gradient(135deg, rgba(14,165,233,0.4), rgba(139,92,246,0.4));
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+
+    /* Stat card hover */
+    .stat-card-glow { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .stat-card-glow:hover { transform: translateY(-2px); box-shadow: 0 8px 32px var(--shadow-glow); }
+
+    /* Chart container */
+    .chart-container { position: relative; height: 280px; }
+
+    /* Form inputs */
+    .form-input {
+      background: var(--input-bg);
+      border: 1px solid var(--border-solid);
+      color: var(--text-primary);
+      border-radius: 0.5rem;
+      padding: 0.625rem 0.875rem;
+      width: 100%;
+      font-size: 0.875rem;
+      font-family: inherit;
+    }
+    .form-input:focus { outline: none; border-color: #0ea5e9; box-shadow: 0 0 0 3px rgba(14,165,233,0.15); }
+    .form-input::placeholder { color: var(--text-muted); }
+
+    /* Select */
+    .form-select {
+      background: var(--select-bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2394a3b8' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 0.75rem center;
+      border: 1px solid var(--border-solid);
+      color: var(--text-primary);
+      border-radius: 0.5rem;
+      padding: 0.625rem 2.25rem 0.625rem 0.875rem;
+      width: 100%;
+      appearance: none;
+      -webkit-appearance: none;
+      font-size: 0.875rem;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .form-select:focus { outline: none; border-color: #0ea5e9; box-shadow: 0 0 0 3px rgba(14,165,233,0.15); }
+    .form-select option { background: var(--option-bg); color: var(--text-primary); }
+
+    /* Buttons */
+    .btn-primary {
+      background: linear-gradient(135deg, #0ea5e9, #0284c7);
+      color: #fff;
+      border: none;
+      border-radius: 0.5rem;
+      padding: 0.625rem 1.5rem;
+      font-weight: 600;
+      font-size: 0.875rem;
+      font-family: inherit;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease !important;
+      box-shadow: 0 2px 8px rgba(14,165,233,0.3);
+    }
+    .btn-primary:hover:not(:disabled) { background: linear-gradient(135deg, #38bdf8, #0ea5e9); box-shadow: 0 4px 16px rgba(14,165,233,0.4); transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .btn-danger {
+      background: rgba(239,68,68,0.1);
+      color: #f87171;
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 0.5rem;
+      padding: 0.5rem 1rem;
+      font-weight: 500;
+      font-size: 0.875rem;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.2s ease, border-color 0.2s ease !important;
+    }
+    .btn-danger:hover { background: rgba(239,68,68,0.2); border-color: rgba(239,68,68,0.5); }
+
+    .btn-google {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      background: #fff;
+      color: #1f2937;
+      border: none;
+      border-radius: 0.625rem;
+      padding: 0.875rem 2rem;
+      font-weight: 600;
+      font-size: 1rem;
+      font-family: inherit;
+      cursor: pointer;
+      transition: transform 0.25s ease, box-shadow 0.25s ease !important;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+      width: 100%;
+      max-width: 320px;
+    }
+    .btn-google:hover { background: #f8fafc; box-shadow: 0 8px 32px rgba(0,0,0,0.35); transform: translateY(-2px); }
+    .btn-google:active { transform: translateY(0); }
+
+    /* ── Theme Toggle Button ───────────────────────────────────── */
+    .theme-toggle {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      border-radius: 9999px;
+      border: 1.5px solid var(--border-solid);
+      background: var(--bg-surface-2);
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: border-color 0.25s ease, background 0.25s ease !important;
+    }
+    .theme-toggle:hover {
+      border-color: #0ea5e9;
+      box-shadow: 0 0 0 3px rgba(14,165,233,0.15);
+    }
+    .theme-toggle-knob {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f59e0b, #fbbf24);
+      transition: transform 0.3s cubic-bezier(0.34,1.56,0.64,1), background 0.3s ease !important;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      line-height: 1;
+    }
+    html.light .theme-toggle-knob {
+      transform: translateX(20px);
+      background: linear-gradient(135deg, #0ea5e9, #7c3aed);
+    }
+    .theme-toggle-icon-sun  { display: inline; }
+    .theme-toggle-icon-moon { display: none; }
+    html.light .theme-toggle-icon-sun  { display: none; }
+    html.light .theme-toggle-icon-moon { display: inline; }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.875rem 1.25rem;
+      border-radius: 0.625rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      max-width: 380px;
+      z-index: 9999;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+      animation: toastIn 0.3s cubic-bezier(0.16,1,0.3,1);
+    }
+    @keyframes toastIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+    .toast-success { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.4); color: #059669; }
+    .toast-error   { background: rgba(239,68,68,0.15);  border: 1px solid rgba(239,68,68,0.4);  color: #dc2626; }
+    .toast-info    { background: rgba(14,165,233,0.15); border: 1px solid rgba(14,165,233,0.4); color: #0284c7; }
+    html.dark .toast-success { color: #6ee7b7; }
+    html.dark .toast-error   { color: #fca5a5; }
+    html.dark .toast-info    { color: #7dd3fc; }
+
+    /* Record rows */
+    .record-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      border-radius: 0.5rem;
+      background: var(--record-bg);
+      border: 1px solid var(--border);
+      animation: fadeIn 0.3s ease-out;
+    }
+    .record-row:hover { background: var(--record-hover); }
+    @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+    @keyframes slideUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+
+    /* Spinner */
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite !important;
+      transition: none !important;
+      flex-shrink: 0;
+    }
+    .spinner-blue {
+      border: 2px solid rgba(14,165,233,0.2);
+      border-top-color: #0ea5e9;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Skeleton */
+    .skeleton {
+      background: linear-gradient(90deg, var(--skeleton-a) 25%, var(--skeleton-b) 50%, var(--skeleton-a) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite !important;
+      transition: none !important;
+      border-radius: 0.375rem;
+      color: transparent !important;
+    }
+    @keyframes shimmer { 0% { background-position:200% 0; } 100% { background-position:-200% 0; } }
+
+    /* Auth background */
+    .auth-bg {
+      background:
+        radial-gradient(ellipse at 20% 50%, rgba(14,165,233,0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(139,92,246,0.08) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 100%, rgba(16,185,129,0.05) 0%, transparent 50%),
+        var(--auth-bg-solid);
+    }
+
+    /* Nav */
+    .nav-gradient {
+      background: var(--nav-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Delete btn */
+    .btn-delete {
+      width: 28px; height: 28px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 0.375rem;
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.2);
+      color: #ef4444;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .btn-delete:hover { background: rgba(239,68,68,0.18); border-color: rgba(239,68,68,0.4); }
+
+    /* Section line */
+    .section-line { height: 2px; background: linear-gradient(90deg, #0ea5e9, transparent); margin-top: 0.25rem; border-radius: 1px; }
+
+    /* Tabs */
+    .tab-btn {
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      border: 1px solid transparent;
+      white-space: nowrap;
+      color: var(--text-secondary);
+      background: transparent;
+    }
+    .tab-btn:hover { color: var(--text-primary); background: var(--tab-hover-bg); }
+    .tab-btn.active { color: #0ea5e9; background: rgba(14,165,233,0.12); border-color: rgba(14,165,233,0.3); }
+
+    /* Empty state */
+    .empty-state {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 2.5rem 1rem; color: var(--text-muted); text-align: center; gap: 0.5rem;
+    }
+
+    /* Badge */
+    .badge { display: inline-flex; align-items: center; padding: 0.125rem 0.5rem; border-radius: 9999px; font-size: 0.6875rem; font-weight: 600; }
+    .badge-blue { background: rgba(14,165,233,0.15); color: #0284c7; }
+    html.dark .badge-blue { color: #38bdf8; }
+
+    /* Light-mode specific text overrides (Tailwind classes use hardcoded values) */
+    html.light .text-white     { color: var(--text-primary) !important; }
+    html.light .text-gray-300  { color: var(--text-secondary) !important; }
+    html.light .text-gray-400  { color: var(--text-label) !important; }
+    html.light .text-gray-500  { color: var(--text-muted) !important; }
+    html.light .text-gray-600  { color: #64748b !important; }
+    html.light .border-gray-800{ border-color: var(--footer-border) !important; }
+    html.light .border-gray-700{ border-color: var(--border-solid) !important; }
+
+    /* Utility */
+    .hidden { display: none !important; }
+
+    /* ── Domain Warning Banner ───────────────────────────────────── */
+    #domain-warning {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 10000;
+      padding: 0.75rem 1.25rem;
+      background: linear-gradient(90deg, #7c2d12, #9a3412);
+      border-bottom: 1px solid rgba(251,146,60,0.4);
+      display: flex;
+      align-items: flex-start;
+      gap: 0.875rem;
+      font-size: 0.8125rem;
+      color: #fed7aa;
+      backdrop-filter: blur(8px);
+      animation: slideDown 0.35s cubic-bezier(0.16,1,0.3,1);
+    }
+    @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    #domain-warning .warn-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
+    #domain-warning ol { margin: 0.375rem 0 0; padding-left: 1.25rem; line-height: 1.7; }
+    #domain-warning strong { color: #ffedd5; }
+    #domain-warning a { color: #fb923c; text-decoration: underline; text-underline-offset: 2px; }
+    #domain-warning a:hover { color: #fed7aa; }
+    #domain-warning .warn-close {
+      margin-left: auto; flex-shrink: 0;
+      background: rgba(251,146,60,0.15);
+      border: 1px solid rgba(251,146,60,0.3);
+      color: #fed7aa;
+      border-radius: 0.375rem;
+      width: 24px; height: 24px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 0.875rem;
+      transition: background 0.15s ease !important;
+    }
+    #domain-warning .warn-close:hover { background: rgba(251,146,60,0.3); }
+  </style>
+</head>
+
+<body class="antialiased">
+
+  <!-- ═══════════════════════ AUTH SCREEN ═══════════════════════ -->
+  <div id="auth-screen" class="auth-bg min-h-screen flex flex-col items-center justify-center p-6">
+    <div class="text-center mb-10" style="animation: slideUp 0.5s cubic-bezier(0.16,1,0.3,1)">
+      <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-sky-500 to-blue-700 mb-5 shadow-lg" style="box-shadow:0 0 40px rgba(14,165,233,0.35)">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+      </div>
+      <h1 class="text-fluid-xl font-bold text-white tracking-tight">ElectraTrack</h1>
+      <p class="text-gray-400 mt-2 text-sm max-w-xs mx-auto leading-relaxed">Your intelligent electricity bill manager with powerful analytics and year-over-year insights.</p>
+    </div>
+
+    <!-- Domain not-authorized warning (injected by JS when needed) -->
+    <div id="domain-warning" class="hidden"></div>
+
+    <div class="glass grad-border p-8 w-full max-w-sm text-center" style="animation: slideUp 0.6s cubic-bezier(0.16,1,0.3,1)">
+      <h2 class="text-lg font-semibold text-white mb-1">Welcome back</h2>
+      <p class="text-gray-500 text-sm mb-6">Sign in to access your dashboard</p>
+
+      <button id="google-sign-in-btn" class="btn-google mx-auto" aria-label="Sign in with Google" onclick="handleGoogleSignIn()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="w-5 h-5 flex-shrink-0">
+          <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+          <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
+          <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
+          <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
+        </svg>
+        <span id="google-btn-text">Continue with Google</span>
+        <div id="google-btn-spinner" class="spinner hidden" style="border-color:rgba(31,41,55,0.2);border-top-color:#1f2937;width:16px;height:16px;"></div>
+      </button>
+
+      <p class="text-gray-600 text-xs mt-6">Protected by Firebase Authentication &amp; per-user Firestore rules.</p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════ MAIN APP ═══════════════════════ -->
+  <div id="app-screen" class="hidden min-h-screen flex flex-col">
+
+    <!-- NAV -->
+    <nav class="nav-gradient sticky top-0 z-50 px-4 sm:px-6 py-3">
+      <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500 to-blue-700 flex items-center justify-center shadow">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+          </div>
+          <span class="font-bold text-white text-sm tracking-tight">ElectraTrack</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <img id="user-avatar" src="" alt="User avatar" class="w-7 h-7 rounded-full border border-gray-700 object-cover hidden" />
+          <span id="user-name" class="text-gray-300 text-sm font-medium hidden sm:block max-w-[140px] truncate"></span>
+
+          <!-- ── THEME TOGGLE ── -->
+          <button
+            id="theme-toggle-btn"
+            class="theme-toggle"
+            onclick="toggleTheme()"
+            aria-label="Toggle light/dark theme"
+            title="Toggle theme"
+          >
+            <span class="theme-toggle-knob">
+              <!-- Sun icon (dark mode active) -->
+              <span class="theme-toggle-icon-sun" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#1f2937" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="5"/>
+                  <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                  <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+              </span>
+              <!-- Moon icon (light mode active) -->
+              <span class="theme-toggle-icon-moon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+              </span>
+            </span>
+          </button>
+
+          <button onclick="handleSignOut()" class="btn-danger text-xs py-1.5 px-3" aria-label="Sign out">
+            <span class="flex items-center gap-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h6a2 2 0 012 2v1"/>
+              </svg>
+              Sign Out
+            </span>
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- CONTENT -->
+    <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-8 space-y-8" style="animation: fadeIn 0.4s ease-out">
+
+      <!-- STAT CARDS -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div class="glass grad-border rounded-xl p-4 stat-card-glow">
+          <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">Total Records</p>
+          <p id="stat-total-records" class="text-2xl font-bold text-white skeleton h-8 w-12">&nbsp;</p>
+        </div>
+        <div class="glass grad-border rounded-xl p-4 stat-card-glow">
+          <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">Avg Monthly Bill</p>
+          <p id="stat-avg-bill" class="text-2xl font-bold text-sky-400 skeleton h-8 w-24">&nbsp;</p>
+        </div>
+        <div class="glass grad-border rounded-xl p-4 stat-card-glow">
+          <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">Highest Bill</p>
+          <p id="stat-max-bill" class="text-2xl font-bold text-purple-400 skeleton h-8 w-24">&nbsp;</p>
+        </div>
+        <div class="glass grad-border rounded-xl p-4 stat-card-glow">
+          <p class="text-xs text-gray-500 font-medium uppercase tracking-wide mb-1">Total Units</p>
+          <p id="stat-total-units" class="text-2xl font-bold text-emerald-400 skeleton h-8 w-20">&nbsp;</p>
+        </div>
+      </div>
+
+      <!-- FORM + RECORDS -->
+      <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+        <!-- FORM -->
+        <div class="lg:col-span-2">
+          <div class="glass grad-border rounded-xl p-6">
+            <h2 class="text-base font-semibold text-white mb-1">Add Bill Record</h2>
+            <div class="section-line w-24 mb-5"></div>
+
+            <form id="bill-form" onsubmit="handleFormSubmit(event)" novalidate class="space-y-4">
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label for="input-month" class="block text-xs font-medium text-gray-400 mb-1.5">Month <span class="text-red-400">*</span></label>
+                  <select id="input-month" class="form-select" required aria-required="true">
+                    <option value="">Select</option>
+                    <option value="1">January</option><option value="2">February</option>
+                    <option value="3">March</option><option value="4">April</option>
+                    <option value="5">May</option><option value="6">June</option>
+                    <option value="7">July</option><option value="8">August</option>
+                    <option value="9">September</option><option value="10">October</option>
+                    <option value="11">November</option><option value="12">December</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="input-year" class="block text-xs font-medium text-gray-400 mb-1.5">Year <span class="text-red-400">*</span></label>
+                  <input id="input-year" type="number" class="form-input" placeholder="2024" min="2000" max="2100" required aria-required="true" inputmode="numeric" />
+                </div>
+              </div>
+
+              <div>
+                <label for="input-amount" class="block text-xs font-medium text-gray-400 mb-1.5">Bill Amount (&#8377;) <span class="text-red-400">*</span></label>
+                <div class="relative">
+                  <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium pointer-events-none">&#8377;</span>
+                  <input id="input-amount" type="number" class="form-input pl-7" placeholder="0.00" min="0.01" step="0.01" required aria-required="true" inputmode="decimal" />
+                </div>
+              </div>
+
+              <div>
+                <label for="input-units" class="block text-xs font-medium text-gray-400 mb-1.5">Units Consumed (kWh) <span class="text-red-400">*</span></label>
+                <div class="relative">
+                  <input id="input-units" type="number" class="form-input pr-12" placeholder="0.0" min="0.01" step="0.01" required aria-required="true" inputmode="decimal" />
+                  <span class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs font-medium pointer-events-none">kWh</span>
+                </div>
+              </div>
+
+              <p id="form-error" class="text-red-400 text-xs hidden" role="alert" aria-live="polite"></p>
+
+              <button type="submit" id="submit-btn" class="btn-primary w-full flex items-center justify-center gap-2 mt-1">
+                <span id="submit-btn-text">Add Record</span>
+                <div id="submit-spinner" class="spinner hidden"></div>
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- RECORDS LIST -->
+        <div class="lg:col-span-3">
+          <div class="glass grad-border rounded-xl p-6 flex flex-col" style="min-height:320px">
+            <div class="flex items-center justify-between mb-1">
+              <h2 class="text-base font-semibold text-white">Recent Records</h2>
+              <span id="records-count-badge" class="badge badge-blue hidden">0 records</span>
+            </div>
+            <div class="section-line w-28 mb-5"></div>
+
+            <!-- Skeleton -->
+            <div id="records-loading" class="space-y-3">
+              <div class="skeleton h-14 rounded-lg"></div>
+              <div class="skeleton h-14 rounded-lg"></div>
+              <div class="skeleton h-14 rounded-lg"></div>
+            </div>
+
+            <!-- List -->
+            <div id="records-list" class="space-y-2 overflow-y-auto max-h-[420px] pr-1 hidden" role="list"></div>
+
+            <!-- Empty -->
+            <div id="records-empty" class="empty-state hidden">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              <p class="text-sm font-medium">No records yet</p>
+              <p class="text-xs">Add your first electricity bill using the form.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ANALYTICS -->
+      <div>
+        <h2 class="text-fluid-lg font-bold text-white mb-1">Analytics Dashboard</h2>
+        <div class="section-line w-40 mb-2"></div>
+        <p class="text-gray-500 text-sm mb-6">Visualize consumption patterns and trends across months and years.</p>
+
+        <!-- TABS -->
+        <div class="flex items-center gap-2 mb-6 overflow-x-auto pb-1" role="tablist" aria-label="Analytics charts">
+          <button class="tab-btn active" id="tab-annual" onclick="switchTab('annual')" role="tab" aria-selected="true" aria-controls="panel-annual">&#128197; Annual Pattern</button>
+          <button class="tab-btn" id="tab-mom" onclick="switchTab('mom')" role="tab" aria-selected="false" aria-controls="panel-mom">&#128202; Month Comparison</button>
+          <button class="tab-btn" id="tab-trend" onclick="switchTab('trend')" role="tab" aria-selected="false" aria-controls="panel-trend">&#128200; Year Overlay</button>
+        </div>
+
+        <!-- PANEL 1: Annual -->
+        <div id="panel-annual" role="tabpanel" aria-labelledby="tab-annual">
+          <div class="glass grad-border rounded-xl p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 class="font-semibold text-white text-sm">12-Month Usage Pattern</h3>
+                <p class="text-xs text-gray-500 mt-0.5">Monthly bill amount and units for the selected year</p>
+              </div>
+              <div class="flex items-center gap-3 flex-shrink-0">
+                <label for="annual-year-select" class="text-xs text-gray-400 whitespace-nowrap">Year:</label>
+                <select id="annual-year-select" class="form-select" style="width:110px" onchange="renderAnnualChart()" aria-label="Select year for annual chart">
+                  <option value="">&#8212;</option>
+                </select>
+              </div>
+            </div>
+            <div id="annual-chart-empty" class="empty-state hidden">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+              <p class="text-sm font-medium">No data for selected year</p>
+              <p class="text-xs">Select a year with records, or add records first.</p>
+            </div>
+            <div class="chart-container" id="annual-chart-wrap">
+              <canvas id="annual-chart" aria-label="Annual electricity usage chart" role="img"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL 2: MoM YoY -->
+        <div id="panel-mom" role="tabpanel" aria-labelledby="tab-mom" class="hidden">
+          <div class="glass grad-border rounded-xl p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 class="font-semibold text-white text-sm">Month-over-Month Year-over-Year</h3>
+                <p class="text-xs text-gray-500 mt-0.5">Selected month vs the same month in the prior year</p>
+              </div>
+              <div class="flex items-center gap-3 flex-wrap">
+                <label for="mom-month-select" class="text-xs text-gray-400 whitespace-nowrap">Month:</label>
+                <select id="mom-month-select" class="form-select" style="width:130px" onchange="renderMomChart()" aria-label="Select month">
+                  <option value="">&#8212;</option>
+                  <option value="1">January</option><option value="2">February</option>
+                  <option value="3">March</option><option value="4">April</option>
+                  <option value="5">May</option><option value="6">June</option>
+                  <option value="7">July</option><option value="8">August</option>
+                  <option value="9">September</option><option value="10">October</option>
+                  <option value="11">November</option><option value="12">December</option>
+                </select>
+                <label for="mom-year-select" class="text-xs text-gray-400 whitespace-nowrap">Year:</label>
+                <select id="mom-year-select" class="form-select" style="width:100px" onchange="renderMomChart()" aria-label="Select year">
+                  <option value="">&#8212;</option>
+                </select>
+              </div>
+            </div>
+            <div id="mom-chart-empty" class="empty-state hidden">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+              <p class="text-sm font-medium">Insufficient data</p>
+              <p class="text-xs">Need at least one record for the selected month.</p>
+            </div>
+            <div class="chart-container" id="mom-chart-wrap">
+              <canvas id="mom-chart" aria-label="Month comparison chart" role="img"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- PANEL 3: Year Overlay -->
+        <div id="panel-trend" role="tabpanel" aria-labelledby="tab-trend" class="hidden">
+          <div class="glass grad-border rounded-xl p-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h3 class="font-semibold text-white text-sm">Consecutive Year Overlay</h3>
+                <p class="text-xs text-gray-500 mt-0.5">Full 12-month billing cycle across two years</p>
+              </div>
+              <div class="flex items-center gap-3 flex-wrap">
+                <label for="trend-metric-select" class="text-xs text-gray-400 whitespace-nowrap">Metric:</label>
+                <select id="trend-metric-select" class="form-select" style="width:120px" onchange="renderTrendChart()" aria-label="Select metric">
+                  <option value="amount">Amount (&#8377;)</option>
+                  <option value="units">Units (kWh)</option>
+                </select>
+                <label for="trend-year1-select" class="text-xs text-gray-400 whitespace-nowrap">Year A:</label>
+                <select id="trend-year1-select" class="form-select" style="width:100px" onchange="renderTrendChart()" aria-label="Select Year A">
+                  <option value="">&#8212;</option>
+                </select>
+                <label for="trend-year2-select" class="text-xs text-gray-400 whitespace-nowrap">Year B:</label>
+                <select id="trend-year2-select" class="form-select" style="width:100px" onchange="renderTrendChart()" aria-label="Select Year B">
+                  <option value="">&#8212;</option>
+                </select>
+              </div>
+            </div>
+            <div id="trend-chart-empty" class="empty-state hidden">
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+              <p class="text-sm font-medium">Select two different years</p>
+              <p class="text-xs">Choose Year A and Year B with available records.</p>
+            </div>
+            <div class="chart-container" id="trend-chart-wrap">
+              <canvas id="trend-chart" aria-label="Year overlay trend chart" role="img"></canvas>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /analytics -->
+    </main>
+
+    <footer class="border-t border-gray-800 py-5 px-4 text-center text-xs text-gray-600 mt-4">
+      <p>ElectraTrack &copy; <span id="footer-year"></span> &#8212; All data is encrypted and isolated per user account via Firestore Security Rules.</p>
+    </footer>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container" aria-live="polite" aria-atomic="true" style="position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;display:flex;flex-direction:column;gap:0.5rem;pointer-events:none;"></div>
+
+  <!-- ═══════════════════════ JAVASCRIPT ═══════════════════════ -->
+  <script>
+    /* ============================================================
+       SECTION 1 — FIREBASE CONFIGURATION
+       Replace placeholder values with your actual Firebase project
+       credentials from Firebase Console → Project Settings → Apps.
+       
+       These client-side keys are safe to expose; security is
+       enforced exclusively via Firebase Auth + Firestore Rules.
+       @see https://firebase.google.com/docs/web/setup
+    ============================================================ */
+    const FIREBASE_CONFIG = {
+      apiKey:            "AIzaSyCVjsAGXsKhI0xs52vsGqQvzER6EDuqdcQ",
+      authDomain:        "electratrack-b8ffc.firebaseapp.com",
+      projectId:         "electratrack-b8ffc",
+      storageBucket:     "electratrack-b8ffc.firebasestorage.app",
+      messagingSenderId: "788915312668",
+      appId:             "1:788915312668:web:d2e20e541d7cfc05a2e7d9"
+    };
+
+    // Idempotent initialisation guard
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+
+    /** @type {firebase.auth.Auth} */
+    const auth = firebase.auth();
+
+    /** @type {firebase.firestore.Firestore} */
+    const db = firebase.firestore();
+
+    /**
+     * NOTE: Firestore offline persistence (enablePersistence / enableIndexedDbPersistence)
+     * is intentionally NOT called here.
+     *
+     * Every variant of this API in the Firebase 9.x compat SDK triggers a
+     * deprecation warning pointing to `FirestoreSettings.cache`, which is only
+     * accessible via the modular (non-compat) SDK — incompatible with our CDN
+     * constraint.
+     *
+     * Firestore still provides an in-memory cache by default, so all reads that
+     * happen within a session are served from cache without a network round-trip.
+     * The only capability lost is cross-session offline support, which is an
+     * acceptable trade-off for a CDN-only deployment.
+     */
+
+
+    /* ============================================================
+       SECTION 2 — APPLICATION STATE
+    ============================================================ */
+
+    /**
+     * Centralised application state object.
+     * All Firestore-derived data is stored here to decouple the
+     * rendering layer from the data-fetching layer.
+     */
+    const AppState = {
+      /** @type {firebase.User|null} */
+      currentUser: null,
+
+      /**
+       * Flat array of all user's electricity records.
+       * Sorted by year desc, month desc (as returned by Firestore).
+       * @type {Array<{id:string,month:number,year:number,amount:number,units:number}>}
+       */
+      records: [],
+
+      /** @type {firebase.firestore.CollectionReference|null} */
+      collectionRef: null,
+
+      /** @type {function|null} Firestore real-time listener unsubscribe handle. */
+      unsubscribeListener: null,
+
+      /**
+       * Chart.js instance registry. Destroyed before each re-render
+       * to prevent canvas reuse exceptions.
+       * @type {{annual:Chart|null, mom:Chart|null, trend:Chart|null}}
+       */
+      charts: { annual: null, mom: null, trend: null },
+
+      /** Currently active analytics tab identifier. @type {'annual'|'mom'|'trend'} */
+      activeTab: 'annual',
+
+      /** Current theme. @type {'dark'|'light'} */
+      theme: 'dark',
+    };
+
+    /**
+     * Short month name lookup (1-indexed, 0 is unused sentinel).
+     * @type {string[]}
+     */
+    const MONTH_SHORT = ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+    /**
+     * Full month name lookup (1-indexed).
+     * @type {string[]}
+     */
+    const MONTH_FULL = [
+      '','January','February','March','April','May','June',
+      'July','August','September','October','November','December',
+    ];
+
+
+    /* ============================================================
+       SECTION 3 — AUTHENTICATION
+    ============================================================ */
+
+    /**
+     * Bootstrap authentication: set LOCAL persistence (survives browser
+     * restarts), then attach the auth state observer.
+     * LOCAL is the default in Firebase v9+ compat but we set it explicitly
+     * per specification.
+     */
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+      .then(() => auth.onAuthStateChanged(onAuthStateChanged))
+      .catch((err) => {
+        console.error('[ElectraTrack] setPersistence failed:', err);
+        auth.onAuthStateChanged(onAuthStateChanged);
+      });
+
+    /**
+     * Firebase auth state observer. Called synchronously on load if a cached
+     * session exists, and again on every subsequent sign-in / sign-out.
+     *
+     * Enforces strict DOM gating: the application UI is never revealed
+     * to an unauthenticated visitor.
+     *
+     * @param {firebase.User|null} user - Authenticated Firebase user, or null.
+     */
+    function onAuthStateChanged(user) {
+      const authEl = document.getElementById('auth-screen');
+      const appEl  = document.getElementById('app-screen');
+
+      if (user) {
+        AppState.currentUser   = user;
+        AppState.collectionRef = db
+          .collection('users')
+          .doc(user.uid)
+          .collection('electricity_records');
+
+        // Populate nav identity elements
+        const nameEl = document.getElementById('user-name');
+        nameEl.textContent = user.displayName || user.email || 'User';
+
+        if (user.photoURL) {
+          const avatarEl = document.getElementById('user-avatar');
+          avatarEl.src = user.photoURL;
+          avatarEl.classList.remove('hidden');
+        }
+
+        document.getElementById('footer-year').textContent = new Date().getFullYear();
+
+        authEl.classList.add('hidden');
+        appEl.classList.remove('hidden');
+
+        attachFirestoreListener();
+
+      } else {
+        // Detach listener on sign-out
+        if (AppState.unsubscribeListener) {
+          AppState.unsubscribeListener();
+          AppState.unsubscribeListener = null;
+        }
+        AppState.currentUser   = null;
+        AppState.collectionRef = null;
+
+        authEl.classList.remove('hidden');
+        appEl.classList.add('hidden');
+      }
+    }
+
+    /**
+     * Initiates Google Sign-In via popup.
+     * Only GoogleAuthProvider is used; email/password and anonymous
+     * providers are never instantiated.
+     *
+     * Error handling covers all known Firebase Auth error codes including
+     * `auth/unauthorized-domain`, which fires when the current hostname
+     * is not listed in Firebase Console → Authentication → Settings →
+     * Authorised domains. The fix is purely a Firebase Console action;
+     * no code change resolves it.
+     *
+     * @returns {Promise<void>}
+     */
+    async function handleGoogleSignIn() {
+      const btn     = document.getElementById('google-sign-in-btn');
+      const btnText = document.getElementById('google-btn-text');
+      const spinner = document.getElementById('google-btn-spinner');
+
+      btn.disabled        = true;
+      btnText.textContent = 'Signing in\u2026';
+      spinner.classList.remove('hidden');
+
+      try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.addScope('email');
+        provider.addScope('profile');
+        await auth.signInWithPopup(provider);
+        // onAuthStateChanged handles all post-auth UI transitions
+      } catch (err) {
+        console.error('[ElectraTrack] Google sign-in error:', err);
+
+        if (err.code === 'auth/unauthorized-domain') {
+          // Show the persistent banner with exact fix steps
+          showDomainWarning();
+          showToast(
+            'Domain not authorised. See the orange banner above for the exact fix steps.',
+            'error'
+          );
+        } else {
+          const msg =
+            err.code === 'auth/popup-closed-by-user'   ? 'Sign-in popup was closed. Try again.' :
+            err.code === 'auth/network-request-failed' ? 'Network error. Check your internet connection.' :
+            err.code === 'auth/popup-blocked'          ? 'Popup was blocked by your browser. Allow popups for this site and retry.' :
+            err.code === 'auth/cancelled-popup-request'? 'Another sign-in is already in progress.' :
+            err.code === 'auth/internal-error'         ? 'Firebase internal error. Check your API key in FIREBASE_CONFIG.' :
+                                                         `Sign-in failed (${err.code || 'unknown'}). Please try again.`;
+          showToast(msg, 'error');
+        }
+      } finally {
+        btn.disabled        = false;
+        btnText.textContent = 'Continue with Google';
+        spinner.classList.add('hidden');
+      }
+    }
+
+    /**
+     * Complete sign-out protocol per specification:
+     * 1. Detach Firestore listener.
+     * 2. Destroy Chart.js instances.
+     * 3. Nullify all client-side data references.
+     * 4. Call firebase.auth().signOut().
+     * 5. Hard-reload to flush any residual DOM/memory state.
+     *
+     * @returns {Promise<void>}
+     */
+    async function handleSignOut() {
+      try {
+        if (AppState.unsubscribeListener) {
+          AppState.unsubscribeListener();
+          AppState.unsubscribeListener = null;
+        }
+
+        Object.keys(AppState.charts).forEach((key) => {
+          if (AppState.charts[key]) { AppState.charts[key].destroy(); AppState.charts[key] = null; }
+        });
+
+        // Nullify all data references
+        AppState.records       = [];
+        AppState.currentUser   = null;
+        AppState.collectionRef = null;
+
+        await auth.signOut();
+        window.location.reload();
+      } catch (err) {
+        console.error('[ElectraTrack] Sign-out error:', err);
+        showToast('Sign-out failed. Please try again.', 'error');
+      }
+    }
+
+
+    /* ============================================================
+       SECTION 4 — FIRESTORE DATA LAYER
+    ============================================================ */
+
+    /**
+     * Attaches a real-time Firestore `onSnapshot` listener to the
+     * authenticated user's `electricity_records` collection.
+     *
+     * QUERY DESIGN — single-field orderBy to avoid a composite index:
+     *
+     *   `.orderBy('year').orderBy('month')` requires a Firestore composite index
+     *   (year + month) that must be created manually in the Firebase Console.
+     *   To eliminate that dependency entirely, we order by `timestamp` only —
+     *   a single-field index that Firestore creates automatically for every field.
+     *   The snapshot is then sorted client-side by year desc → month desc,
+     *   producing identical output with zero Firebase Console configuration.
+     *
+     * On each snapshot update, triggers the full UI refresh cycle:
+     * stat cards → records list → year selectors → active chart.
+     */
+    function attachFirestoreListener() {
+      if (!AppState.collectionRef) return;
+
+      AppState.unsubscribeListener = AppState.collectionRef
+        .orderBy('timestamp', 'desc')   // single-field — no composite index needed
+        .onSnapshot(
+          (snapshot) => {
+            // Map Firestore docs to plain objects
+            const raw = snapshot.docs.map((doc) => ({
+              id:     doc.id,
+              month:  Number(doc.data().month),
+              year:   Number(doc.data().year),
+              amount: Number(doc.data().amount),
+              units:  Number(doc.data().units),
+            }));
+
+            // Sort client-side: year desc, then month desc
+            // Produces the same order as the old composite query without any index
+            AppState.records = raw.sort((a, b) =>
+              b.year !== a.year ? b.year - a.year : b.month - a.month
+            );
+
+            updateStatCards();
+            renderRecordsList();
+            populateYearSelectors();
+            renderActiveChart();
+          },
+          (err) => {
+            console.error('[ElectraTrack] Snapshot error:', err);
+            showToast('Failed to sync data. Check your connection.', 'error');
+          }
+        );
+    }
+
+    /**
+     * Writes a new electricity bill document to Firestore.
+     * Uses `serverTimestamp()` for the `timestamp` field to ensure
+     * server-authoritative ordering and audit integrity.
+     *
+     * @param {number} month  - Calendar month integer (1–12).
+     * @param {number} year   - Four-digit year integer (2000–2100).
+     * @param {number} amount - Bill amount in INR (positive float).
+     * @param {number} units  - Units consumed in kWh (positive float).
+     * @returns {Promise<firebase.firestore.DocumentReference>}
+     */
+    function addRecord(month, year, amount, units) {
+      if (!AppState.collectionRef) return Promise.reject(new Error('No active session.'));
+      return AppState.collectionRef.add({
+        month,
+        year,
+        amount,
+        units,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+
+    /**
+     * Deletes a specific electricity bill document from Firestore.
+     *
+     * @param {string} recordId - Firestore document ID to delete.
+     * @returns {Promise<void>}
+     */
+    function deleteRecord(recordId) {
+      if (!AppState.collectionRef) return Promise.reject(new Error('No active session.'));
+      return AppState.collectionRef.doc(recordId).delete();
+    }
+
+
+    /* ============================================================
+       SECTION 5 — INPUT VALIDATION & SANITIZATION
+    ============================================================ */
+
+    /**
+     * Validates and sanitizes the bill entry form.
+     *
+     * Rules enforced:
+     * - All fields required.
+     * - Month: integer in [1, 12].
+     * - Year: integer in [2000, 2100].
+     * - Amount: positive finite float, max 8 decimal places.
+     * - Units: positive finite float, max 8 decimal places.
+     *
+     * @returns {{valid:boolean, error?:string, month?:number, year?:number, amount?:number, units?:number}}
+     */
+    function validateForm() {
+      const rawMonth  = (document.getElementById('input-month').value  || '').trim();
+      const rawYear   = (document.getElementById('input-year').value   || '').trim();
+      const rawAmount = (document.getElementById('input-amount').value || '').trim();
+      const rawUnits  = (document.getElementById('input-units').value  || '').trim();
+
+      if (!rawMonth)  return { valid: false, error: 'Please select a month.' };
+      if (!rawYear)   return { valid: false, error: 'Please enter a year.' };
+      if (!rawAmount) return { valid: false, error: 'Please enter the bill amount.' };
+      if (!rawUnits)  return { valid: false, error: 'Please enter units consumed.' };
+
+      const month  = parseInt(rawMonth,  10);
+      const year   = parseInt(rawYear,   10);
+      const amount = parseFloat(rawAmount);
+      const units  = parseFloat(rawUnits);
+
+      if (isNaN(month)  || month  < 1    || month  > 12)   return { valid: false, error: 'Month must be between 1 and 12.' };
+      if (isNaN(year)   || year   < 2000 || year   > 2100) return { valid: false, error: 'Year must be between 2000 and 2100.' };
+      if (isNaN(amount) || amount <= 0   || !isFinite(amount)) return { valid: false, error: 'Bill amount must be a positive number.' };
+      if (isNaN(units)  || units  <= 0   || !isFinite(units))  return { valid: false, error: 'Units must be a positive number.' };
+      if ((rawAmount.split('.')[1] || '').length > 8) return { valid: false, error: 'Amount has too many decimal places (max 8).' };
+      if ((rawUnits.split('.')[ 1] || '').length > 8) return { valid: false, error: 'Units has too many decimal places (max 8).' };
+
+      return { valid: true, month, year, amount, units };
+    }
+
+
+    /* ============================================================
+       SECTION 6 — FORM SUBMISSION HANDLER
+    ============================================================ */
+
+    /**
+     * Handles the bill entry form's submit event.
+     *
+     * Flow:
+     * 1. Validate inputs via `validateForm()`.
+     * 2. Guard against duplicate month+year records.
+     * 3. Write to Firestore via `addRecord()`.
+     * 4. Reset form and show confirmation toast.
+     *
+     * @param {Event} event - The DOM form submit event.
+     * @returns {Promise<void>}
+     */
+    async function handleFormSubmit(event) {
+      event.preventDefault();
+
+      const errorEl  = document.getElementById('form-error');
+      const submitBtn = document.getElementById('submit-btn');
+      const btnText  = document.getElementById('submit-btn-text');
+      const spinner  = document.getElementById('submit-spinner');
+
+      errorEl.classList.add('hidden');
+      errorEl.textContent = '';
+
+      const v = validateForm();
+      if (!v.valid) {
+        errorEl.textContent = v.error;
+        errorEl.classList.remove('hidden');
+        return;
+      }
+
+      // Duplicate guard: same month + year already exists
+      const duplicate = AppState.records.find((r) => r.month === v.month && r.year === v.year);
+      if (duplicate) {
+        errorEl.textContent = `A record for ${MONTH_FULL[v.month]} ${v.year} already exists. Delete it first to replace it.`;
+        errorEl.classList.remove('hidden');
+        return;
+      }
+
+      submitBtn.disabled  = true;
+      btnText.textContent = 'Saving\u2026';
+      spinner.classList.remove('hidden');
+
+      try {
+        await addRecord(v.month, v.year, v.amount, v.units);
+        document.getElementById('bill-form').reset();
+        document.getElementById('input-year').value = new Date().getFullYear();
+        showToast(`Record for ${MONTH_FULL[v.month]} ${v.year} added.`, 'success');
+      } catch (err) {
+        console.error('[ElectraTrack] addRecord error:', err);
+        showToast('Failed to save record. Please try again.', 'error');
+      } finally {
+        submitBtn.disabled  = false;
+        btnText.textContent = 'Add Record';
+        spinner.classList.add('hidden');
+      }
+    }
+
+
+    /* ============================================================
+       SECTION 7 — UI RENDERING: STAT CARDS & RECORDS
+    ============================================================ */
+
+    /**
+     * Recomputes and updates the four summary stat cards.
+     * Removes skeleton placeholder styling on first data arrival.
+     */
+    function updateStatCards() {
+      const { records } = AppState;
+
+      const ids = ['stat-total-records','stat-avg-bill','stat-max-bill','stat-total-units'];
+      ids.forEach((id) => {
+        const el = document.getElementById(id);
+        el.classList.remove('skeleton');
+        el.style.color = '';
+      });
+
+      if (records.length === 0) {
+        document.getElementById('stat-total-records').textContent = '0';
+        document.getElementById('stat-avg-bill').textContent      = '\u2014';
+        document.getElementById('stat-max-bill').textContent      = '\u2014';
+        document.getElementById('stat-total-units').textContent   = '\u2014';
+        return;
+      }
+
+      const totalAmount = records.reduce((s, r) => s + r.amount, 0);
+      const totalUnits  = records.reduce((s, r) => s + r.units,  0);
+      const maxAmount   = Math.max(...records.map((r) => r.amount));
+
+      document.getElementById('stat-total-records').textContent = records.length;
+      document.getElementById('stat-avg-bill').textContent      = '\u20b9' + fmtNum(totalAmount / records.length, 0);
+      document.getElementById('stat-max-bill').textContent      = '\u20b9' + fmtNum(maxAmount, 0);
+      document.getElementById('stat-total-units').textContent   = fmtNum(totalUnits, 0) + ' kWh';
+    }
+
+    /**
+     * Renders the scrollable records list from `AppState.records`.
+     * Each row includes the month/year label, unit count, amount, and a
+     * delete affordance that prompts for confirmation.
+     */
+    function renderRecordsList() {
+      const loadEl   = document.getElementById('records-loading');
+      const listEl   = document.getElementById('records-list');
+      const emptyEl  = document.getElementById('records-empty');
+      const badgeEl  = document.getElementById('records-count-badge');
+      const { records } = AppState;
+
+      loadEl.classList.add('hidden');
+
+      if (records.length === 0) {
+        listEl.classList.add('hidden');
+        emptyEl.classList.remove('hidden');
+        badgeEl.classList.add('hidden');
+        return;
+      }
+
+      emptyEl.classList.add('hidden');
+      listEl.classList.remove('hidden');
+      badgeEl.classList.remove('hidden');
+      badgeEl.textContent = `${records.length} record${records.length !== 1 ? 's' : ''}`;
+
+      const rateStr = (r) => {
+        const rate = r.units > 0 ? r.amount / r.units : 0;
+        return '\u20b9' + fmtNum(rate, 2) + '/kWh';
+      };
+
+      listEl.innerHTML = records.map((r) => `
+        <div class="record-row" role="listitem" id="record-row-${r.id}">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-9 h-9 flex-shrink-0 rounded-lg bg-gradient-to-br from-sky-700 to-blue-900 flex items-center justify-center text-xs font-bold text-white shadow">
+              ${MONTH_SHORT[r.month]}
+            </div>
+            <div class="min-w-0">
+              <p class="text-sm font-semibold text-white leading-tight truncate">${MONTH_FULL[r.month]} ${r.year}</p>
+              <p class="text-xs text-gray-500 leading-tight">${fmtNum(r.units, 2)} kWh &bull; ${rateStr(r)}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 flex-shrink-0 ml-2">
+            <p class="text-sm font-bold text-sky-400 text-right">\u20b9${fmtNum(r.amount, 2)}</p>
+            <button
+              class="btn-delete"
+              onclick="confirmDelete('${escapeHtml(r.id)}', '${escapeHtml(MONTH_FULL[r.month])} ${r.year}')"
+              aria-label="Delete record for ${escapeHtml(MONTH_FULL[r.month])} ${r.year}"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    /**
+     * Prompts for confirmation then deletes a record from Firestore.
+     *
+     * @param {string} recordId    - Firestore document ID.
+     * @param {string} recordLabel - Human-readable label for the confirm dialog.
+     * @returns {Promise<void>}
+     */
+    async function confirmDelete(recordId, recordLabel) {
+      if (!window.confirm(`Delete the record for "${recordLabel}"?\n\nThis action cannot be undone.`)) return;
+      try {
+        await deleteRecord(recordId);
+        showToast(`Record for ${recordLabel} deleted.`, 'info');
+      } catch (err) {
+        console.error('[ElectraTrack] deleteRecord error:', err);
+        showToast('Failed to delete record. Please try again.', 'error');
+      }
+    }
+
+
+    /* ============================================================
+       SECTION 8 — YEAR SELECTOR MANAGEMENT
+    ============================================================ */
+
+    /**
+     * Derives the unique set of years from `AppState.records` (sorted desc)
+     * and repopulates all year `<select>` elements, preserving their
+     * previously selected value where possible.
+     *
+     * Year B (trend-year2-select) defaults to the second-most-recent year
+     * to immediately suggest a meaningful comparison on first load.
+     */
+    function populateYearSelectors() {
+      const years = [...new Set(AppState.records.map((r) => r.year))].sort((a, b) => b - a);
+
+      const configs = [
+        { id: 'annual-year-select',  defaultIdx: 0 },
+        { id: 'mom-year-select',     defaultIdx: 0 },
+        { id: 'trend-year1-select',  defaultIdx: 0 },
+        { id: 'trend-year2-select',  defaultIdx: 1 },
+      ];
+
+      configs.forEach(({ id, defaultIdx }) => {
+        const el   = document.getElementById(id);
+        const prev = el.value;
+
+        el.innerHTML = '<option value="">\u2014</option>';
+        years.forEach((y) => {
+          const opt = document.createElement('option');
+          opt.value = y; opt.textContent = y;
+          el.appendChild(opt);
+        });
+
+        if (years.map(String).includes(prev)) {
+          el.value = prev;
+        } else if (years[defaultIdx] !== undefined) {
+          el.value = years[defaultIdx];
+        }
+      });
+    }
+
+
+    /* ============================================================
+       SECTION 9 — TAB MANAGEMENT
+    ============================================================ */
+
+    /**
+     * Switches the visible analytics panel and synchronises ARIA
+     * `aria-selected` attributes for screen reader compatibility.
+     *
+     * @param {'annual'|'mom'|'trend'} tabName - Target tab identifier.
+     */
+    function switchTab(tabName) {
+      AppState.activeTab = tabName;
+      ['annual', 'mom', 'trend'].forEach((t) => {
+        const active = t === tabName;
+        document.getElementById(`tab-${t}`).classList.toggle('active', active);
+        document.getElementById(`tab-${t}`).setAttribute('aria-selected', String(active));
+        document.getElementById(`panel-${t}`).classList.toggle('hidden', !active);
+      });
+      renderActiveChart();
+    }
+
+    /** Dispatches chart rendering to the correct handler for the active tab. */
+    function renderActiveChart() {
+      if      (AppState.activeTab === 'annual') renderAnnualChart();
+      else if (AppState.activeTab === 'mom')    renderMomChart();
+      else if (AppState.activeTab === 'trend')  renderTrendChart();
+    }
+
+
+    /* ============================================================
+       SECTION 10 — CHART.JS HELPERS
+    ============================================================ */
+
+    /**
+     * Returns a Chart.js options object whose colours are resolved from
+     * CSS custom properties at call-time. Because every chart is destroyed
+     * and re-created on theme toggle (via `renderActiveChart()`), calling
+     * this function after the theme class has been applied ensures that
+     * the correct light or dark palette is always used.
+     *
+     * Resolves from: `--chart-tick`, `--chart-grid`, `--chart-legend`,
+     * `--chart-tooltip-bg`, `--chart-tooltip-border`,
+     * `--chart-tooltip-title`, `--chart-tooltip-body`.
+     *
+     * @param {{plugins?:Object, scales?:Object, [key:string]:any}} [overrides={}]
+     * @returns {Object} Merged Chart.js options.
+     */
+    function getBaseOptions(overrides = {}) {
+      const { plugins: ovPlugins = {}, scales: ovScales = {}, ...rest } = overrides;
+
+      // Read CSS custom properties at the moment the chart is created
+      const css   = getComputedStyle(document.documentElement);
+      const tick  = css.getPropertyValue('--chart-tick').trim()          || '#484f58';
+      const grid  = css.getPropertyValue('--chart-grid').trim()          || 'rgba(48,54,61,0.4)';
+      const leg   = css.getPropertyValue('--chart-legend').trim()        || '#8b949e';
+      const ttBg  = css.getPropertyValue('--chart-tooltip-bg').trim()    || 'rgba(22,27,34,0.95)';
+      const ttBdr = css.getPropertyValue('--chart-tooltip-border').trim()|| 'rgba(48,54,61,0.8)';
+      const ttTtl = css.getPropertyValue('--chart-tooltip-title').trim() || '#e6edf3';
+      const ttBdy = css.getPropertyValue('--chart-tooltip-body').trim()  || '#8b949e';
+
+      return {
+        responsive:          true,
+        maintainAspectRatio: false,
+        animation:           { duration: 500, easing: 'easeOutQuart' },
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: {
+              color:    leg,
+              font:     { size: 11, family: 'Inter,system-ui,sans-serif', weight: '500' },
+              boxWidth: 12, boxHeight: 12, padding: 16,
+            },
+          },
+          tooltip: {
+            backgroundColor: ttBg,
+            borderColor:     ttBdr,
+            borderWidth:     1,
+            titleColor:      ttTtl,
+            bodyColor:       ttBdy,
+            padding:         10,
+            cornerRadius:    8,
+            titleFont:       { size: 12, weight: '600', family: 'Inter,system-ui,sans-serif' },
+            bodyFont:        { size: 11, family: 'Inter,system-ui,sans-serif' },
+            displayColors:   true,
+            boxPadding:      4,
+          },
+          ...ovPlugins,
+        },
+        scales: {
+          x: {
+            ticks:  { color: tick, font: { size: 10, family: 'Inter,system-ui,sans-serif' } },
+            grid:   { color: grid },
+            border: { color: grid },
+          },
+          y: {
+            beginAtZero: true,
+            ticks:  { color: tick, font: { size: 10, family: 'Inter,system-ui,sans-serif' } },
+            grid:   { color: grid },
+            border: { color: grid },
+          },
+          ...ovScales,
+        },
+        ...rest,
+      };
+    }
+
+    /**
+     * Destroys an existing Chart.js instance (if any) and creates a fresh one
+     * on the target canvas, preventing the "Canvas is already in use" error.
+     *
+     * @param {'annual'|'mom'|'trend'} key    - Registry key in AppState.charts.
+     * @param {string}                 canvasId - DOM ID of the target <canvas>.
+     * @param {Object}                 config   - Full Chart.js configuration.
+     * @returns {Chart} Newly created Chart.js instance.
+     */
+    function makeChart(key, canvasId, config) {
+      if (AppState.charts[key]) { AppState.charts[key].destroy(); AppState.charts[key] = null; }
+      AppState.charts[key] = new Chart(document.getElementById(canvasId).getContext('2d'), config);
+      return AppState.charts[key];
+    }
+
+    /**
+     * Shows or hides a chart panel based on data availability.
+     *
+     * @param {string}  wrapId  - DOM ID of the chart wrapper.
+     * @param {string}  emptyId - DOM ID of the empty-state placeholder.
+     * @param {boolean} hasData - True to show chart, false to show empty state.
+     */
+    function setChartVisibility(wrapId, emptyId, hasData) {
+      document.getElementById(wrapId).classList.toggle('hidden', !hasData);
+      document.getElementById(emptyId).classList.toggle('hidden', hasData);
+    }
+
+    /**
+     * Attempts to create a canvas linear gradient for chart fill areas.
+     * Falls back to a solid colour string if the canvas is unavailable.
+     *
+     * @param {string} canvasId - DOM ID of the chart canvas.
+     * @param {Array<{stop:number,color:string}>} stops - Colour stops.
+     * @returns {CanvasGradient|string}
+     */
+    function makeGradient(canvasId, stops) {
+      try {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) return stops[0].color;
+        const ctx  = canvas.getContext('2d');
+        const h    = canvas.parentElement?.offsetHeight || 280;
+        const grad = ctx.createLinearGradient(0, 0, 0, h);
+        stops.forEach(({ stop, color }) => grad.addColorStop(stop, color));
+        return grad;
+      } catch (_) { return stops[0].color; }
+    }
+
+
+    /* ============================================================
+       SECTION 11 — CHART 1: ANNUAL AGGREGATION
+    ============================================================ */
+
+    /**
+     * Renders a dual-axis chart (bar for Amount, line for Units) covering all
+     * 12 calendar months of the selected year.
+     *
+     * Edge-case handling:
+     * - No year selected            → empty state.
+     * - Year selected, no records   → empty state.
+     * - Month with no record        → plotted as 0 (gap-filled), not omitted.
+     */
+    function renderAnnualChart() {
+      const year = parseInt(document.getElementById('annual-year-select').value, 10);
+
+      if (!year || AppState.records.length === 0) {
+        setChartVisibility('annual-chart-wrap', 'annual-chart-empty', false);
+        return;
+      }
+
+      const yearRecs = AppState.records.filter((r) => r.year === year);
+      if (yearRecs.length === 0) {
+        setChartVisibility('annual-chart-wrap', 'annual-chart-empty', false);
+        return;
+      }
+
+      setChartVisibility('annual-chart-wrap', 'annual-chart-empty', true);
+
+      const amtMap  = buildMonthMap(yearRecs, 'amount');
+      const unitMap = buildMonthMap(yearRecs, 'units');
+      const months  = MONTH_SHORT.slice(1);                                   // Jan..Dec
+      const amounts = Array.from({ length: 12 }, (_, i) => amtMap[i + 1]  ?? 0);
+      const units   = Array.from({ length: 12 }, (_, i) => unitMap[i + 1] ?? 0);
+
+      const amtGrad  = makeGradient('annual-chart', [{ stop: 0, color: 'rgba(14,165,233,0.55)' }, { stop: 1, color: 'rgba(14,165,233,0.03)' }]);
+      const unitGrad = makeGradient('annual-chart', [{ stop: 0, color: 'rgba(167,139,250,0.55)' }, { stop: 1, color: 'rgba(167,139,250,0.03)' }]);
+
+      makeChart('annual', 'annual-chart', {
+        type: 'bar',
+        data: {
+          labels: months,
+          datasets: [
+            {
+              label:           'Amount (\u20b9)',
+              data:            amounts,
+              backgroundColor: amtGrad,
+              borderColor:     '#0ea5e9',
+              borderWidth:     1.5,
+              borderRadius:    5,
+              borderSkipped:   false,
+              yAxisID:         'y',
+            },
+            {
+              label:               'Units (kWh)',
+              type:                'line',
+              data:                units,
+              borderColor:         '#a78bfa',
+              backgroundColor:     'transparent',
+              borderWidth:         2.5,
+              pointBackgroundColor:'#a78bfa',
+              pointBorderColor:    '#161b22',
+              pointBorderWidth:    2,
+              pointRadius:         4,
+              pointHoverRadius:    6,
+              tension:             0.35,
+              yAxisID:             'y1',
+            },
+          ],
+        },
+        options: getBaseOptions({
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: (ctx) => ctx.dataset.label.includes('Amount')
+                  ? ` \u20b9${fmtNum(ctx.parsed.y, 2)}`
+                  : ` ${fmtNum(ctx.parsed.y, 2)} kWh`,
+              },
+            },
+          },
+          scales: {
+            y: {
+              position: 'left', beginAtZero: true,
+              ticks:  { color: '#484f58', font: { size: 10 }, callback: (v) => '\u20b9' + fmtNum(v, 0) },
+              grid:   { color: 'rgba(48,54,61,0.4)' },
+              border: { color: 'rgba(48,54,61,0.4)' },
+            },
+            y1: {
+              position: 'right', beginAtZero: true,
+              ticks:  { color: '#484f58', font: { size: 10 }, callback: (v) => fmtNum(v, 0) },
+              grid:   { drawOnChartArea: false },
+              border: { color: 'rgba(48,54,61,0.4)' },
+            },
+          },
+        }),
+      });
+    }
+
+
+    /* ============================================================
+       SECTION 12 — CHART 2: MoM YoY COMPARISON
+    ============================================================ */
+
+    /**
+     * Renders a grouped bar chart comparing Amount and Units for a specific
+     * month in the selected year against the same month in the prior year.
+     *
+     * Edge-case handling:
+     * - No month or year selected                   → empty state.
+     * - No records for both years' selected month   → empty state.
+     * - One year missing data for that month        → renders as 0 (not omitted).
+     */
+    function renderMomChart() {
+      const month = parseInt(document.getElementById('mom-month-select').value, 10);
+      const year  = parseInt(document.getElementById('mom-year-select').value,  10);
+
+      if (!month || !year) {
+        setChartVisibility('mom-chart-wrap', 'mom-chart-empty', false);
+        return;
+      }
+
+      const currRec  = AppState.records.find((r) => r.month === month && r.year === year);
+      const priorRec = AppState.records.find((r) => r.month === month && r.year === year - 1);
+
+      if (!currRec && !priorRec) {
+        setChartVisibility('mom-chart-wrap', 'mom-chart-empty', false);
+        return;
+      }
+
+      setChartVisibility('mom-chart-wrap', 'mom-chart-empty', true);
+
+      makeChart('mom', 'mom-chart', {
+        type: 'bar',
+        data: {
+          labels: ['Bill Amount (\u20b9)', 'Units (kWh)'],
+          datasets: [
+            {
+              label:           `${MONTH_FULL[month]} ${year}`,
+              data:            [currRec?.amount ?? 0, currRec?.units ?? 0],
+              backgroundColor: 'rgba(14,165,233,0.65)',
+              borderColor:     '#0ea5e9',
+              borderWidth:     1.5, borderRadius: 6, borderSkipped: false,
+            },
+            {
+              label:           `${MONTH_FULL[month]} ${year - 1}`,
+              data:            [priorRec?.amount ?? 0, priorRec?.units ?? 0],
+              backgroundColor: 'rgba(167,139,250,0.65)',
+              borderColor:     '#a78bfa',
+              borderWidth:     1.5, borderRadius: 6, borderSkipped: false,
+            },
+          ],
+        },
+        options: getBaseOptions({
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const v = ctx.parsed.y;
+                  return ctx.label.includes('Amount')
+                    ? ` ${ctx.dataset.label}: \u20b9${fmtNum(v, 2)}`
+                    : ` ${ctx.dataset.label}: ${fmtNum(v, 2)} kWh`;
+                },
+              },
+            },
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks:  { color: '#484f58', font: { size: 10 }, callback: (v) => fmtNum(v, 0) },
+              grid:   { color: 'rgba(48,54,61,0.4)' },
+              border: { color: 'rgba(48,54,61,0.4)' },
+            },
+          },
+        }),
+      });
+    }
+
+
+    /* ============================================================
+       SECTION 13 — CHART 3: CONSECUTIVE YEAR OVERLAY
+    ============================================================ */
+
+    /**
+     * Renders a multi-line chart overlaying the full 12-month billing cycle
+     * of two user-selected years. Supports toggling between Amount and Units.
+     *
+     * Edge-case handling:
+     * - Same year selected for both selectors → empty state.
+     * - Either year has zero records          → renders a flat-zero line.
+     * - Missing months within a year          → zero-filled (no discontinuities).
+     *
+     * Year B is rendered with a dashed line to visually differentiate it
+     * from Year A without relying on colour alone (colour-blindness safety).
+     */
+    function renderTrendChart() {
+      const y1     = parseInt(document.getElementById('trend-year1-select').value, 10);
+      const y2     = parseInt(document.getElementById('trend-year2-select').value, 10);
+      const metric = document.getElementById('trend-metric-select').value; // 'amount'|'units'
+
+      if (!y1 || !y2 || y1 === y2) {
+        setChartVisibility('trend-chart-wrap', 'trend-chart-empty', false);
+        return;
+      }
+
+      setChartVisibility('trend-chart-wrap', 'trend-chart-empty', true);
+
+      const mkSeries = (year) => {
+        const map = buildMonthMap(AppState.records.filter((r) => r.year === year), metric);
+        return Array.from({ length: 12 }, (_, i) => map[i + 1] ?? 0);
+      };
+
+      const tickCb = (v) => metric === 'amount' ? '\u20b9' + fmtNum(v, 0) : fmtNum(v, 0);
+      const ttlCb  = (ctx) => {
+        const v = ctx.parsed.y;
+        const yr = ctx.dataset.label.split('\u2014')[0].trim();
+        return metric === 'amount'
+          ? ` ${yr}: \u20b9${fmtNum(v, 2)}`
+          : ` ${yr}: ${fmtNum(v, 2)} kWh`;
+      };
+
+      makeChart('trend', 'trend-chart', {
+        type: 'line',
+        data: {
+          labels: MONTH_SHORT.slice(1),
+          datasets: [
+            {
+              label:               `${y1} \u2014 ${metric === 'amount' ? 'Amount (\u20b9)' : 'Units (kWh)'}`,
+              data:                mkSeries(y1),
+              borderColor:         '#0ea5e9',
+              backgroundColor:     'rgba(14,165,233,0.08)',
+              borderWidth:         2.5,
+              pointBackgroundColor:'#0ea5e9',
+              pointBorderColor:    '#161b22',
+              pointBorderWidth:    2,
+              pointRadius:         5,
+              pointHoverRadius:    7,
+              fill:                true,
+              tension:             0.35,
+            },
+            {
+              label:               `${y2} \u2014 ${metric === 'amount' ? 'Amount (\u20b9)' : 'Units (kWh)'}`,
+              data:                mkSeries(y2),
+              borderColor:         '#f59e0b',
+              backgroundColor:     'rgba(245,158,11,0.08)',
+              borderWidth:         2.5,
+              borderDash:          [6, 3],
+              pointBackgroundColor:'#f59e0b',
+              pointBorderColor:    '#161b22',
+              pointBorderWidth:    2,
+              pointRadius:         5,
+              pointHoverRadius:    7,
+              fill:                true,
+              tension:             0.35,
+            },
+          ],
+        },
+        options: getBaseOptions({
+          plugins: {
+            tooltip: { callbacks: { label: ttlCb } },
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks:  { color: '#484f58', font: { size: 10 }, callback: tickCb },
+              grid:   { color: 'rgba(48,54,61,0.4)' },
+              border: { color: 'rgba(48,54,61,0.4)' },
+            },
+          },
+        }),
+      });
+    }
+
+
+    /* ============================================================
+       SECTION 14 — UTILITY FUNCTIONS
+    ============================================================ */
+
+    /**
+     * Builds a month→value lookup map from a filtered record set.
+     * Only one record per month is expected (enforced by the form).
+     *
+     * @param {Array<{month:number,[key:string]:any}>} records - Source records.
+     * @param {'amount'|'units'} field - Field name to extract.
+     * @returns {Object<number,number>} Map keyed by month integer (1–12).
+     */
+    function buildMonthMap(records, field) {
+      return records.reduce((acc, r) => { acc[r.month] = Number(r[field]) || 0; return acc; }, {});
+    }
+
+    /**
+     * Formats a number with Indian locale grouping (e.g. 1,23,456.78)
+     * and a fixed decimal count.
+     *
+     * @param {number} value    - Value to format.
+     * @param {number} decimals - Decimal places (0–8).
+     * @returns {string}
+     */
+    function fmtNum(value, decimals = 2) {
+      if (value === null || value === undefined || isNaN(value)) return '0';
+      return value.toLocaleString('en-IN', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      });
+    }
+
+    /**
+     * Escapes HTML special characters to prevent XSS when injecting
+     * user-controlled strings into innerHTML.
+     *
+     * @param {string} str - Raw string to sanitize.
+     * @returns {string} HTML-escaped string.
+     */
+    function escapeHtml(str) {
+      const map = { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' };
+      return String(str).replace(/[&<>"']/g, (c) => map[c]);
+    }
+
+    /**
+     * Renders a self-dismissing toast notification.
+     * Toasts stack vertically (managed by a flex column container)
+     * and auto-remove after 3.5 seconds with a fade-out transition.
+     *
+     * @param {string}                     message - Notification body text.
+     * @param {'success'|'error'|'info'}   type    - Visual severity variant.
+     */
+    function showToast(message, type = 'info') {
+      const icons = { success: '\u2713', error: '\u2715', info: '\u2139' };
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.setAttribute('role', 'status');
+      toast.style.pointerEvents = 'all';
+      toast.innerHTML = `<span style="font-weight:700;font-size:1rem;flex-shrink:0;">${icons[type]}</span><span>${escapeHtml(message)}</span>`;
+      document.getElementById('toast-container').appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        toast.style.opacity    = '0';
+        toast.style.transform  = 'translateY(8px)';
+        setTimeout(() => toast.remove(), 320);
+      }, 3500);
+    }
+
+    // Pre-fill current year in the year input on DOMContentLoaded
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('input-year').value = new Date().getFullYear();
+      initTheme();
+      checkDomainOnLoad();
+    });
+
+
+    /* ============================================================
+       SECTION 15 — DOMAIN AUTHORIZATION HELPERS
+    ============================================================ */
+
+    /**
+     * Derives the set of hostnames that Firebase pre-authorises by default.
+     * Any other hostname (including raw IP addresses such as 127.0.0.1)
+     * must be added manually to Firebase Console.
+     * @type {string[]}
+     */
+    const SAFE_ORIGINS = ['localhost', '127.0.0.1', '::1'];
+
+    /**
+     * Proactively detects local / unrecognised development origins on page load
+     * and shows a softer advisory banner BEFORE the user attempts to sign in.
+     *
+     * Logic:
+     *   - file:// protocol → always warn (file:// is never authorised)
+     *   - 127.0.0.1 → warn (Firebase does NOT pre-authorise raw IPs; only 'localhost')
+     *   - Custom IPs / non-localhost hostnames → warn
+     *   - 'localhost' → safe, no banner
+     *   - Production domains → safe, no banner
+     */
+    function checkDomainOnLoad() {
+      const { hostname, protocol } = window.location;
+      const isFileProtocol   = protocol === 'file:';
+      const isRawIp          = hostname === '127.0.0.1' || hostname === '::1';
+      const isUnknownOrigin  = !SAFE_ORIGINS.includes(hostname) && !hostname.endsWith('.web.app') && !hostname.endsWith('.firebaseapp.com');
+
+      if (isFileProtocol) {
+        showDomainWarning('file://');
+      } else if (isRawIp) {
+        // 127.0.0.1 requires explicit authorisation in Firebase Console
+        showDomainWarning(hostname);
+      }
+      // localhost and production domains need no warning
+    }
+
+    /**
+     * Renders a persistent full-detail warning banner explaining the exact
+     * Firebase Console steps to authorise the current domain.
+     * Idempotent — calling it multiple times is safe.
+     *
+     * @param {string} [domain] - The domain to highlight in the message.
+     */
+    function showDomainWarning(domain) {
+      const el = document.getElementById('domain-warning');
+      if (!el || !el.classList.contains('hidden')) return; // already visible
+
+      const currentDomain = domain || window.location.hostname;
+      const isFile = currentDomain === 'file://';
+      const consoleUrl = `https://console.firebase.google.com/project/${FIREBASE_CONFIG.projectId}/authentication/settings`;
+
+      el.innerHTML = `
+        <span class="warn-icon">&#9888;</span>
+        <div style="flex:1;min-width:0;">
+          <strong>Firebase Auth setup required &mdash; sign-in will fail on this domain.</strong>
+          ${isFile
+            ? `<p style="margin:0.25rem 0 0;opacity:0.9;">
+                You are opening the file directly (<code>file://</code>).
+                Firebase blocks OAuth on the file protocol.
+                Open this file through a local server instead
+                (e.g. VS Code &rsaquo; Live Server, which serves at <strong>http://localhost:5500</strong>).
+               </p>`
+            : `<p style="margin:0.25rem 0 0;opacity:0.9;">
+                Current domain <strong>${escapeHtml(currentDomain)}</strong> is not in Firebase's authorised list.
+                Follow these steps once:
+               </p>
+               <ol>
+                 <li>Open <a href="${escapeHtml(consoleUrl)}" target="_blank" rel="noopener noreferrer">Firebase Console &rsaquo; Authentication &rsaquo; Settings</a></li>
+                 <li>Click the <strong>Authorised domains</strong> tab</li>
+                 <li>Click <strong>Add domain</strong></li>
+                 <li>Type exactly <strong>${escapeHtml(currentDomain)}</strong> and click <strong>Add</strong></li>
+               </ol>
+               <p style="margin:0.25rem 0 0;opacity:0.8;font-size:0.75rem;">
+                 &#9432;&nbsp; Alternatively, use <strong>localhost</strong> (already pre-authorised) instead of 127.0.0.1.
+                 Simply open <strong>http://localhost:5500</strong> in your browser when using VS Code Live Server.
+               </p>`
+          }
+        </div>
+        <button
+          class="warn-close"
+          onclick="document.getElementById('domain-warning').classList.add('hidden')"
+          aria-label="Dismiss warning"
+          title="Dismiss"
+        >&#10005;</button>
+      `;
+
+      el.classList.remove('hidden');
+    }
+
+
+    /* ============================================================
+       SECTION 15 — THEME MANAGEMENT
+    ============================================================ */
+
+    /**
+     * Initialises the theme on page load by resolving priority:
+     *   1. User's saved preference in localStorage ('dark' | 'light').
+     *   2. OS-level preference via `prefers-color-scheme: dark`.
+     *   3. Default: dark.
+     *
+     * Applies the resolved theme without animation so the initial
+     * render does not flicker.
+     */
+    function initTheme() {
+      const saved = localStorage.getItem('electratrack-theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const resolved = saved || (prefersDark ? 'dark' : 'light');
+      applyTheme(resolved, false /* skipTransition */);
+    }
+
+    /**
+     * Toggles between 'dark' and 'light' themes, persists the choice to
+     * localStorage, and re-renders all active charts so their grid lines,
+     * axis labels, and tooltip colours update immediately.
+     */
+    function toggleTheme() {
+      const next = AppState.theme === 'dark' ? 'light' : 'dark';
+      applyTheme(next, true);
+    }
+
+    /**
+     * Applies a theme by:
+     *   1. Updating `html` element classes (`dark` | `light`).
+     *   2. Persisting to localStorage.
+     *   3. Updating `AppState.theme`.
+     *   4. Re-rendering active Chart.js instance with theme-aware colours.
+     *
+     * @param {'dark'|'light'} theme          - Target theme.
+     * @param {boolean}        [animate=true]  - If false, suppresses the CSS
+     *                                           transition on the initial load
+     *                                           to prevent a flicker.
+     */
+    function applyTheme(theme, animate = true) {
+      const html = document.documentElement;
+
+      if (!animate) {
+        // Temporarily disable all transitions for the initial paint
+        html.style.setProperty('--transition-duration', '0ms');
+        const style = document.createElement('style');
+        style.id = '__no-transition__';
+        style.textContent = '*, *::before, *::after { transition-duration: 0ms !important; }';
+        document.head.appendChild(style);
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            document.getElementById('__no-transition__')?.remove();
+          });
+        });
+      }
+
+      // Apply classes
+      html.classList.remove('dark', 'light');
+      html.classList.add(theme);
+
+      // Persist
+      localStorage.setItem('electratrack-theme', theme);
+      AppState.theme = theme;
+
+      // Re-render the active chart with updated palette
+      // (Chart.js does not observe CSS variables natively)
+      renderActiveChart();
+    }
+  </script>
+</body>
+</html>
